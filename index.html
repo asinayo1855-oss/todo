@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TODO List</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div class="app-header-top">
+        <h1>TODO List</h1>
+        <button type="button" id="darkModeToggle" class="icon-button" title="다크 모드 전환">🌙</button>
+      </div>
+      <p class="progress-text" id="progressText"></p>
+      <div class="progress-bar"><div class="progress-bar-fill" id="progressBarFill"></div></div>
+    </header>
+
+    <form id="todoForm" class="todo-form">
+      <input type="text" id="todoText" placeholder="할 일을 입력하세요" required>
+      <input type="date" id="todoDueDate" title="마감일">
+      <input type="text" id="todoCategory" placeholder="카테고리 (예: 업무)">
+      <select id="todoPriority" title="우선순위">
+        <option value="low">낮음</option>
+        <option value="medium" selected>보통</option>
+        <option value="high">높음</option>
+      </select>
+      <select id="todoRepeat" title="반복">
+        <option value="none">반복 안 함</option>
+        <option value="daily">매일 반복</option>
+        <option value="weekly">매주 반복</option>
+      </select>
+      <button type="submit">추가</button>
+    </form>
+
+    <div class="controls">
+      <input type="text" id="searchText" placeholder="할 일 검색">
+      <input type="text" id="categoryFilter" placeholder="카테고리로 필터">
+      <select id="sortBy" title="정렬 기준">
+        <option value="createdAt">등록일순</option>
+        <option value="dueDate">마감일순</option>
+        <option value="priority">우선순위순</option>
+      </select>
+    </div>
+
+    <div class="io-controls">
+      <button type="button" id="exportBtn">내보내기 (JSON)</button>
+      <button type="button" id="importBtn">가져오기 (JSON)</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+
+    <ul id="todoList" class="todo-list"></ul>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
