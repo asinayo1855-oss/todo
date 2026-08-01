@@ -1,5 +1,3 @@
-const STORAGE_KEY = 'todo-list-items';
-
 const todoForm = document.getElementById('todoForm');
 const todoText = document.getElementById('todoText');
 const todoDueDate = document.getElementById('todoDueDate');
@@ -19,33 +17,63 @@ const importFile = document.getElementById('importFile');
 
 const THEME_KEY = 'todo-list-theme';
 
-let todos = loadTodos();
+const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 
-function loadTodos() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  return raw ? JSON.parse(raw) : [];
+let todos = [];
+
+function fromDbRow(row) {
+  return {
+    id: row.id,
+    text: row.text,
+    dueDate: row.due_date,
+    category: row.category,
+    priority: row.priority,
+    repeat: row.repeat,
+    completed: row.completed,
+    createdAt: new Date(row.created_at).getTime(),
+  };
 }
 
-function saveTodos() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+function toDbRow(todo) {
+  return {
+    text: todo.text,
+    due_date: todo.dueDate || null,
+    category: todo.category,
+    priority: todo.priority,
+    repeat: todo.repeat,
+    completed: todo.completed,
+  };
 }
 
-function generateId() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+async function loadTodos() {
+  const { data, error } = await sb.from('todos').select('*').order('created_at', { ascending: true });
+  if (error) {
+    alert('할 일을 불러오지 못했습니다: ' + error.message);
+    return [];
+  }
+  return data.map(fromDbRow);
 }
 
-function addTodo(text, dueDate, category, priority, repeat) {
-  todos.push({
-    id: generateId(),
-    text,
-    dueDate: dueDate || null,
-    category: category.trim(),
-    priority,
-    repeat: repeat || 'none',
-    completed: false,
-    createdAt: Date.now(),
-  });
-  saveTodos();
+async function addTodo(text, dueDate, category, priority, repeat) {
+  const { data, error } = await sb
+    .from('todos')
+    .insert(toDbRow({
+      text,
+      dueDate: dueDate || null,
+      category: category.trim(),
+      priority,
+      repeat: repeat || 'none',
+      completed: false,
+    }))
+    .select()
+    .single();
+
+  if (error) {
+    alert('할 일을 추가하지 못했습니다: ' + error.message);
+    return;
+  }
+
+  todos.push(fromDbRow(data));
   render();
 }
 
@@ -56,39 +84,60 @@ function nextDueDate(dueDate, repeat) {
   return date.toISOString().slice(0, 10);
 }
 
-function updateTodo(id, changes) {
+async function updateTodo(id, changes) {
   const todo = todos.find((t) => t.id === id);
   if (!todo) return;
-  Object.assign(todo, changes);
-  saveTodos();
-  render();
-}
 
-function deleteTodo(id) {
-  todos = todos.filter((t) => t.id !== id);
-  saveTodos();
-  render();
-}
-
-function toggleComplete(id) {
-  const todo = todos.find((t) => t.id === id);
-  if (!todo) return;
-  todo.completed = !todo.completed;
-
-  if (todo.completed && todo.repeat && todo.repeat !== 'none' && todo.dueDate) {
-    todos.push({
-      id: generateId(),
-      text: todo.text,
-      dueDate: nextDueDate(todo.dueDate, todo.repeat),
-      category: todo.category,
-      priority: todo.priority,
-      repeat: todo.repeat,
-      completed: false,
-      createdAt: Date.now(),
-    });
+  const { error } = await sb.from('todos').update(toDbRow({ ...todo, ...changes })).eq('id', id);
+  if (error) {
+    alert('할 일을 수정하지 못했습니다: ' + error.message);
+    return;
   }
 
-  saveTodos();
+  Object.assign(todo, changes);
+  render();
+}
+
+async function deleteTodo(id) {
+  const { error } = await sb.from('todos').delete().eq('id', id);
+  if (error) {
+    alert('할 일을 삭제하지 못했습니다: ' + error.message);
+    return;
+  }
+
+  todos = todos.filter((t) => t.id !== id);
+  render();
+}
+
+async function toggleComplete(id) {
+  const todo = todos.find((t) => t.id === id);
+  if (!todo) return;
+  const completed = !todo.completed;
+
+  const { error } = await sb.from('todos').update({ completed }).eq('id', id);
+  if (error) {
+    alert('상태를 변경하지 못했습니다: ' + error.message);
+    return;
+  }
+  todo.completed = completed;
+
+  if (completed && todo.repeat && todo.repeat !== 'none' && todo.dueDate) {
+    const { data, error: insertError } = await sb
+      .from('todos')
+      .insert(toDbRow({
+        text: todo.text,
+        dueDate: nextDueDate(todo.dueDate, todo.repeat),
+        category: todo.category,
+        priority: todo.priority,
+        repeat: todo.repeat,
+        completed: false,
+      }))
+      .select()
+      .single();
+
+    if (!insertError) todos.push(fromDbRow(data));
+  }
+
   render();
 }
 
@@ -243,12 +292,12 @@ function startEdit(todo) {
   updateTodo(todo.id, { text: trimmed });
 }
 
-todoForm.addEventListener('submit', (e) => {
+todoForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const text = todoText.value.trim();
   if (!text) return;
 
-  addTodo(text, todoDueDate.value, todoCategory.value, todoPriority.value, todoRepeat.value);
+  await addTodo(text, todoDueDate.value, todoCategory.value, todoPriority.value, todoRepeat.value);
 
   todoForm.reset();
   todoPriority.value = 'medium';
@@ -293,15 +342,33 @@ importFile.addEventListener('change', () => {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
       const imported = JSON.parse(reader.result);
       if (!Array.isArray(imported)) throw new Error('invalid format');
-      todos = imported;
-      saveTodos();
+
+      const { error: deleteError } = await sb.from('todos').delete().not('id', 'is', null);
+      if (deleteError) throw deleteError;
+
+      if (imported.length > 0) {
+        const rows = imported.map((t) =>
+          toDbRow({
+            text: t.text,
+            dueDate: t.dueDate || null,
+            category: t.category || '',
+            priority: t.priority || 'medium',
+            repeat: t.repeat || 'none',
+            completed: !!t.completed,
+          })
+        );
+        const { error: insertError } = await sb.from('todos').insert(rows);
+        if (insertError) throw insertError;
+      }
+
+      todos = await loadTodos();
       render();
     } catch (err) {
-      alert('올바른 JSON 파일이 아닙니다.');
+      alert('올바른 JSON 파일이 아니거나 가져오기에 실패했습니다.');
     }
   };
   reader.readAsText(file);
@@ -330,5 +397,10 @@ function checkReminders() {
   }
 }
 
-render();
-checkReminders();
+async function init() {
+  todos = await loadTodos();
+  render();
+  checkReminders();
+}
+
+init();

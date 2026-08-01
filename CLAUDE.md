@@ -15,7 +15,7 @@ There are no build, lint, or test commands yet because no code has been written.
 
 - **형태 (form)**: web app (HTML/CSS/JS), runs in-browser
 - **사용 범위 (audience)**: single personal user, no login/accounts
-- **데이터 저장 (storage)**: browser localStorage — no backend/server
+- **데이터 저장 (storage)**: Supabase Postgres (`todos` table) via `@supabase/supabase-js`, called directly from the client with the public anon key — no custom backend/server. RLS is enabled with a permissive anon policy since there's no login. (Theme preference still uses localStorage.)
 - **핵심 기능 (core features)**:
   - CRUD for todo items (add/edit/delete/complete)
   - Due dates & reminders
