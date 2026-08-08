@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>방명록</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div class="app-header-top">
+        <h1>방명록</h1>
+        <button type="button" id="adminToggleBtn" class="icon-button">관리자</button>
+      </div>
+      <p class="subtitle">이름이나 별명으로 자유롭게 글을 남겨보세요.</p>
+    </header>
+
+    <div id="adminBar" class="admin-bar" hidden>
+      <span id="adminStatusText"></span>
+      <button type="button" id="adminLogoutBtn">관리자 로그아웃</button>
+    </div>
+
+    <form id="adminLoginForm" class="admin-login-form" hidden>
+      <input type="password" id="adminPassword" placeholder="관리자 비밀번호" required>
+      <button type="submit">로그인</button>
+      <button type="button" id="adminCancelBtn">취소</button>
+    </form>
+
+    <form id="entryForm" class="entry-form">
+      <input type="text" id="entryAuthor" placeholder="이름 또는 별명" maxlength="30" required>
+      <textarea id="entryContent" placeholder="방명록에 남길 내용을 적어주세요" maxlength="1000" required></textarea>
+      <input type="password" id="entryPassword" placeholder="비밀번호 (수정·삭제 시 필요)" minlength="4" required>
+      <button type="submit">등록</button>
+    </form>
+
+    <ul id="entryList" class="entry-list"></ul>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
