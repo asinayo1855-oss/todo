@@ -182,6 +182,35 @@ function verifyOwnership(passwordHash) {
   return ok;
 }
 
+function avatarColor(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return `hsl(${Math.abs(hash) % 360}, 60%, 50%)`;
+}
+
+function createAvatar(name) {
+  const avatar = document.createElement('span');
+  avatar.className = 'avatar';
+  avatar.style.background = avatarColor(name);
+  avatar.textContent = Array.from(name.trim() || '?')[0].toUpperCase();
+  return avatar;
+}
+
+function createIdentity(authorName) {
+  const identity = document.createElement('div');
+  identity.className = 'entry-identity';
+
+  const author = document.createElement('span');
+  author.className = 'entry-author';
+  author.textContent = authorName;
+
+  identity.appendChild(createAvatar(authorName));
+  identity.appendChild(author);
+  return identity;
+}
+
 function formatDate(iso) {
   return new Date(iso).toLocaleString('ko-KR', {
     year: 'numeric',
@@ -213,15 +242,11 @@ function renderEntryItem(entry) {
   const header = document.createElement('div');
   header.className = 'entry-header';
 
-  const author = document.createElement('span');
-  author.className = 'entry-author';
-  author.textContent = entry.authorName;
-
   const date = document.createElement('span');
   date.className = 'entry-date';
   date.textContent = formatDate(entry.createdAt) + (entry.updatedAt ? ' (수정됨)' : '');
 
-  header.appendChild(author);
+  header.appendChild(createIdentity(entry.authorName));
   header.appendChild(date);
   li.appendChild(header);
 
@@ -259,6 +284,7 @@ function renderEntryItem(entry) {
 
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
+    deleteBtn.className = 'danger-action';
     deleteBtn.textContent = '삭제';
     deleteBtn.addEventListener('click', async () => {
       if (!verifyOwnership(entry.passwordHash)) return;
@@ -395,15 +421,11 @@ function renderReplyItem(entry, reply) {
   const header = document.createElement('div');
   header.className = 'entry-header';
 
-  const author = document.createElement('span');
-  author.className = 'entry-author';
-  author.textContent = reply.authorName;
-
   const date = document.createElement('span');
   date.className = 'entry-date';
   date.textContent = formatDate(reply.createdAt) + (reply.updatedAt ? ' (수정됨)' : '');
 
-  header.appendChild(author);
+  header.appendChild(createIdentity(reply.authorName));
   header.appendChild(date);
   li.appendChild(header);
 
@@ -433,6 +455,7 @@ function renderReplyItem(entry, reply) {
 
   const deleteBtn = document.createElement('button');
   deleteBtn.type = 'button';
+  deleteBtn.className = 'danger-action';
   deleteBtn.textContent = '삭제';
   deleteBtn.addEventListener('click', async () => {
     if (!verifyOwnership(reply.passwordHash)) return;
